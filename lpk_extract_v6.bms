@@ -1,0 +1,86 @@
+# script for quickbms https://aluigi.altervista.org/quickbms.htm
+# created by spiritovod, credits to Brouznouf for algorithm
+
+string KEY = "83657ea6ffa1e671375c689a2e99a598"  # for steam version
+string BASE = "1069d88738c5c75f82b44a1f0a382762" # for steam version
+#string KEY = "a7f33db20dfb711a16d5d3dd3d4cef4d"  # for ru version
+#string BASE = "ee36ace0d87a9eaea565e6884a058b63" # for ru version
+#string KEY = "c66e7c755883b5a92227b6c1c71c1d94"   # for jp version
+#string BASE = "51f912aba46f144bba8c3d6dcbf34728"  # for jp version
+#string KEY = "2d7ea2e4d31c53913fd2995ca031f777"  # for tw version
+#string BASE = "53f421141b5159fc5851ce2fd29c9e28" # for tw version
+#string KEY = "287f1d85be26e55a1d994e9e1bfd0df1"  # for kr version
+#string BASE = "6ce3db2fbe338fba87edf2abf6453bfa" # for kr version
+#string KEY = "a2e587d2fac8d6836cad3fd144f0cf2b"  # for cn version
+#string BASE = "c7db380e7d8d9e4771c7eaf5b1f3a78b" # for cn version
+
+
+math ENTRY = 528
+string BASE h BASE
+
+get FILES long
+encryption blowfish KEY
+xmath SIZE "ENTRY * FILES"
+log MEMORY_FILE 4 SIZE
+encryption "" ""
+math MEM = -1
+
+xmath OFFSET "SIZE + 8"
+for i = 0 < FILES
+	get NAMEZ long MEM
+	getdstring NAME NAMEZ MEM
+	padding ENTRY MEM
+	goto -16 MEM SEEK_CUR
+	get DUMMY_OFFSET long MEM
+	get SIZE long MEM
+	get ENSIZE long MEM
+	get ZSIZE long MEM
+	if ZSIZE != 0
+		encryption blowfish KEY
+		clog NAME OFFSET ZSIZE SIZE 0 ENSIZE
+	else
+		log MEMORY_FILE3 OFFSET ENSIZE
+		callfunction decrypt 1
+	endif
+	encryption "" ""
+	math OFFSET + ENSIZE
+next i
+
+startfunction decrypt
+	log MEMORY_FILE2 0 0
+	string TMP_NAME = NAME
+	string TMP_NAME ! "_"
+	string TMP_NAME % "."
+	set TMP_NAME to_unicode TMP_NAME
+	encryption md5 TMP_NAME
+	encryption "" ""
+	string MD = QUICKBMS_HASH
+	
+	for x = 0 < 16
+		xmath TMP "15 - x"
+		getvarchr K BASE x
+		getvarchr M MD TMP
+		math K ^ M
+		putvarchr MEMORY_FILE2 x K
+	next x
+	
+	getdstring AES_KEY 16 MEMORY_FILE2
+	string AES_KEY 0b AES_KEY
+	string AES_KEY l AES_KEY
+	encryption sha256 AES_KEY
+	encryption "" ""
+	string AES_KEY = QUICKBMS_HASH
+	
+	# workaround for unsupported encryption	with blocks
+	math CUR_OFF = 0
+	math BLOCK = 1024
+	
+	for CUR_OFF = CUR_OFF < ENSIZE
+		append
+		encryption aes_256_cbc AES_KEY "" 0 32
+		log NAME CUR_OFF BLOCK MEMORY_FILE3
+		encryption "" ""
+		append
+		math CUR_OFF + BLOCK
+	next
+endfunction
